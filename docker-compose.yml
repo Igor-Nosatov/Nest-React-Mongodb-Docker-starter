@@ -1,0 +1,78 @@
+version: "3.2"
+services:
+
+  nest:
+    build:
+      context: .
+      dockerfile: "Dockerfile"
+    container_name: nestjs
+    restart: unless-stopped
+    tty: true
+    depends_on: 
+      - mongo
+    ports:
+      - "3000:3000"
+    networks:
+      - nestjs_network
+
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+      - MONGO_INITDB_DATABASE=project
+    command: --quiet
+    networks:
+      - nestjs_network
+
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    restart: unless-stopped
+    tty: true
+    depends_on:
+      - mongo
+    ports:
+      - "8081:8081"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: admin
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_MONGODB_PORT: "27017"
+    networks:
+      - nestjs_network
+
+  redis:
+    image: redis:6.2-alpine
+    container_name: redis-service
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "6379:6379"
+    environment:
+      # ALLOW_EMPTY_PASSWORD is recommended only for development.
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    command: redis-server --save 20 1 --loglevel warning --requirepass eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81
+    volumes: 
+      - cache:/data
+    networks:
+      - nestjs_network
+
+volumes:
+  mongo_data:
+    driver: local
+  cache:
+    driver: local
+
+networks:
+  nestjs_network:
